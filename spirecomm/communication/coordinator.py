@@ -27,26 +27,38 @@ def read_stdin(input_queue):
         input_queue.put(stdin_input)
 
 
-def write_stdout(output_queue):
+def write_stdout(output_queue, output_file=None):
     """Read lines from a queue and write them to stdout
 
     :param output_queue: A queue, from which this function will receive lines of text
     :type output_queue: queue.Queue
+    :param output_file: Optional file object to write to instead of sys.stdout
+    :type output_file: file-like object
     :return: None
     """
     while True:
         output = output_queue.get()
-        print(output, end='\n', flush=True)
+        if output_file is not None:
+            output_file.write(output + '\n')
+            output_file.flush()
+        else:
+            print(output, end='\n', flush=True)
 
 
 class Coordinator:
     """An object to coordinate communication with Slay the Spire"""
 
-    def __init__(self):
+    def __init__(self, output_file=None):
+        """Initialize the coordinator.
+
+        :param output_file: Optional file object to write to instead of sys.stdout.
+                           Useful when sys.stdout is redirected (e.g., for pytest).
+        :type output_file: file-like object
+        """
         self.input_queue = queue.Queue()
         self.output_queue = queue.Queue()
         self.input_thread = threading.Thread(target=read_stdin, args=(self.input_queue,))
-        self.output_thread = threading.Thread(target=write_stdout, args=(self.output_queue,))
+        self.output_thread = threading.Thread(target=write_stdout, args=(self.output_queue, output_file))
         self.input_thread.daemon = True
         self.input_thread.start()
         self.output_thread.daemon = True
