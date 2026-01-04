@@ -157,16 +157,21 @@ class Coordinator:
         """
         self.out_of_game_callback = new_callback
 
-    def get_next_raw_message(self, block=False):
+    def get_next_raw_message(self, block=False, timeout=None):
         """Get the next message from Communication Mod as a string
 
         :param block: set to True to wait for the next message
         :type block: bool
+        :param timeout: timeout in seconds (only used if block=True)
+        :type timeout: float
         :return: the message from Communication Mod
         :rtype: str
         """
         if block or not self.input_queue.empty():
-            return self.input_queue.get()
+            try:
+                return self.input_queue.get(block=block, timeout=timeout)
+            except:
+                return None
 
     def receive_game_state_update(self, block=False, perform_callbacks=True):
         """Using the next message from Communication Mod, update the stored game state
