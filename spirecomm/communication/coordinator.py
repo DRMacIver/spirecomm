@@ -9,22 +9,26 @@ from spirecomm.spire.screen import ScreenType
 from spirecomm.communication.action import Action, StartGameAction
 
 
-def read_stdin(input_queue):
-    """Read lines from stdin and write them to a queue
+def read_stdin(input_queue, input_file=None):
+    """Read lines from stdin (or input_file) and write them to a queue
 
     :param input_queue: A queue, to which lines from stdin will be written
     :type input_queue: queue.Queue
+    :param input_file: Optional file object to read from instead of sys.stdin
+    :type input_file: file-like object
     :return: None
     """
+    source = input_file if input_file is not None else sys.stdin
     while True:
         stdin_input = ""
         while True:
-            input_char = sys.stdin.read(1)
-            if input_char == '\n':
+            input_char = source.read(1)
+            if input_char == '\n' or input_char == '':
                 break
             else:
                 stdin_input += input_char
-        input_queue.put(stdin_input)
+        if stdin_input:  # Only queue non-empty lines
+            input_queue.put(stdin_input)
 
 
 def write_stdout(output_queue, output_file=None):
@@ -48,16 +52,19 @@ def write_stdout(output_queue, output_file=None):
 class Coordinator:
     """An object to coordinate communication with Slay the Spire"""
 
-    def __init__(self, output_file=None):
+    def __init__(self, input_file=None, output_file=None):
         """Initialize the coordinator.
 
+        :param input_file: Optional file object to read from instead of sys.stdin.
+                          Useful for reading from named pipes.
+        :type input_file: file-like object
         :param output_file: Optional file object to write to instead of sys.stdout.
                            Useful when sys.stdout is redirected (e.g., for pytest).
         :type output_file: file-like object
         """
         self.input_queue = queue.Queue()
         self.output_queue = queue.Queue()
-        self.input_thread = threading.Thread(target=read_stdin, args=(self.input_queue,))
+        self.input_thread = threading.Thread(target=read_stdin, args=(self.input_queue, input_file))
         self.output_thread = threading.Thread(target=write_stdout, args=(self.output_queue, output_file))
         self.input_thread.daemon = True
         self.input_thread.start()
